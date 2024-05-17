@@ -11,6 +11,10 @@ class Messages(Enum):
 
 class StringConstants(Enum):
     latest = "latest"
+    output_preprocessed = "output_preprocessed.csv"
+    train_preprocessed = "train_preprocessed.csv"
+    validation_preprocessed = "validation_preprocessed.csv"
+    test_preprocessed = "test_preprocessed.csv"
 
 class AmlJobStatusConstants(Enum):
     completed = "Completed"

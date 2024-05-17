@@ -35,22 +35,16 @@ class Utils:
         return user
 
     @staticmethod
-    def get_datastore_base_uri(subscription_id: str,
-                               resource_group_name: str,
-                               datastore_name: str,
-                               workspace_name: str):
-        base_uri = settings.datastore_base_uri.format(subscription_id=subscription_id,
-                                                      resource_group_name=resource_group_name,
-                                                      datastore_name=datastore_name,
-                                                      workspace_name=workspace_name)
+    def get_blob_base_uri(container_name: str,
+                          account_name: str):
+        base_uri = settings.azure_blob_url.format(account_name=account_name,
+                                                  container_name=container_name)
         return base_uri
 
     @staticmethod
     def get_blob_file_uri(ml_client: MLClient, file_path: str, file_name: str):
-        file_url = (Utils.get_datastore_base_uri(subscription_id=ml_client.subscription_id,
-                                                 resource_group_name=ml_client.resource_group_name,
-                                                 datastore_name=ml_client.datastores.get_default().name,
-                                                 workspace_name=ml_client.workspace_name) +
+        file_url = (Utils.get_blob_base_uri(container_name=ml_client.datastores.get_default().container_name,
+                                            account_name=ml_client.datastores.get_default().account_name) +
                     "{datastore_path}/{filename}".format(datastore_path=file_path.strip('/\\'),
                                                          filename=file_name))
         return file_url
@@ -155,3 +149,16 @@ class Utils:
                       parent_job_name,
                       ml_client: MLClient):
         return next(ml_client.jobs.list(parent_job_name=parent_job_name))
+    
+    def is_job_reused(self,
+                    job_instance: object):
+        output_job_name = None
+        reused = job_instance.properties.get('azureml.isreused')
+        reused_flag = reused == 'true'
+        if not reused_flag:
+            output_job_name = job_instance.name
+        elif reused_flag and job_instance.properties.get('azureml.reusedrunid'):
+            output_job_name = job_instance.properties.get('azureml.reusedrunid')
+        if not output_job_name:
+            raise Exception("unable to configure reused job check")
+        return {'is_reused': reused_flag, 'output_job_name': output_job_name}

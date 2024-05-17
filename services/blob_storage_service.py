@@ -56,7 +56,7 @@ class BlobStorageService:
             Returns:
             - BlobServiceClient: Azure Blob Service client.
         """
-        __blob_service_client = BlobServiceClient(account_url=settings.azure_blob_url.format(
+        __blob_service_client = BlobServiceClient(account_url=settings.azure_blob_host_url.format(
             account_name=self.storage_account_name),
             credential=self.__get_credentials())
         return __blob_service_client

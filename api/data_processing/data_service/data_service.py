@@ -13,12 +13,13 @@ from exceptions.file_upload_exception import FileUploadException
 
 
 class DataProcessingService(RunAmlJobService):
-    def __init__(self, workspace, input_file, config_data):
+    def __init__(self, workspace, input_file, config_data, compute):
         super().__init__(workspace=workspace,
                          input_file=input_file,
                          config_data=config_data,
                          experiment=settings.data_processing_experiment)
         self.data_pr_comp = settings.data_processing_component
+        self.compute = compute
 
     def prepare_pipeline_inputs(self):
         try:
@@ -50,7 +51,6 @@ class DataProcessingService(RunAmlJobService):
                                                      # TO DO: replace from config file
                                                      "model_input": model_input,
                                                      "pii_masking": False,
-                                                     "compute": self.config_data["compute"]
                                                      },
                                  "input_file_urls": {"name": self.input_file.filename,
                                                      "datastore_url": input_datastore_url,
@@ -86,7 +86,7 @@ class DataProcessingService(RunAmlJobService):
             print("Assigning Compute")
             # TO DO:
             # get from config
-            pipeline_job.settings.default_compute = meta_data["component_input"]["compute"]
+            pipeline_job.settings.default_compute = self.compute
             # submit job to workspace
             print("submitting the pipeline to the workspace")
             pipeline_job = self.ml_client.jobs.create_or_update(
@@ -105,23 +105,72 @@ class DataProcessingService(RunAmlJobService):
         
 
 class RetrieveDataProcessingJob(CheckAmlJobService):
-    def __init__(self, workspace, job_name, job_db_id):
+    def __init__(self, workspace, job_name, table_id_column):
         super().__init__(workspace=workspace,
                          job_name=job_name,
-                         job_db_id=job_db_id)
+                         table_id_column=table_id_column)
     
     def retrieve_job_status(self):
-        status = self.utils.get_aml_job_status(job_name=self.job_name,
-                                      ml_client=self.ml_client)
-        if status.lower() == AmlJobStatusConstants.completed.value.lower():
-            self.post_completion()
-        else:
-            # TO DO:
-            # Update data base status
-            return status
+        try:
+            self.status = self.utils.get_aml_job_status(job_name=self.job_name,
+                                                   ml_client=self.ml_client)
+            if self.status.lower() == AmlJobStatusConstants.completed.value.lower():
+                return self.post_completion()
+            else:
+                # TO DO:
+                # Update data base status
+                return self.status
+        except Exception as e:
+            raise e
         
     def post_completion(self):
-        pass
+        # TO DO:
+        # use this only if child job produces output
+        child_job = self.utils.get_child_job(parent_job_name=self.job_name,
+                                             ml_client=self.ml_client)
+        reused = self.utils.is_job_reused(job_instance=child_job)
+        output_job_name = "reused['output_job_name']"
+        data_processing_output_path = settings.data_processing_output_path.format(job_name=output_job_name)
+        output_datastore_url = self.utils.get_datastore_file_uri(ml_client=self.ml_client,
+                                                       file_path=data_processing_output_path,
+                                                       file_name=StringConstants.output_preprocessed.value)
+        output_blob_url = self.utils.get_blob_file_uri(ml_client=self.ml_client,
+                                                       file_path=data_processing_output_path,
+                                                       file_name=StringConstants.output_preprocessed.value)
+        print("output_datastore_url", output_datastore_url)
+        print("output_blob_url", output_blob_url)
+        train_datastore_url = self.utils.get_datastore_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.train_preprocessed.value)
+        train_blob_url = self.utils.get_blob_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.train_preprocessed.value)
+        print("train_datastore_url", train_datastore_url)
+        print("train_blob_url", train_blob_url)
+        test_datastore_url = self.utils.get_datastore_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.test_preprocessed.value)
+        test_blob_url = self.utils.get_blob_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.test_preprocessed.value)
+        print("test_datastore_url", test_datastore_url)
+        print("test_blob_url", test_blob_url)
+        validation_datastore_url = self.utils.get_datastore_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.validation_preprocessed.value)
+        validation_blob_url = self.utils.get_blob_file_uri(ml_client=self.ml_client,
+                                                    file_path=data_processing_output_path,
+                                                    file_name=StringConstants.validation_preprocessed.value)
+        print("validation_datastore_url", validation_datastore_url)
+        print("validation_blob_url", validation_blob_url)
+        # TO DO:
+        # INSERT URL AND STATUS IN DATABASE BY table_id_column ID (file id column)
+        return self.status
+
+        
+
+        
+
     
 
 
