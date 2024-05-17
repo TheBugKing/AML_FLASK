@@ -20,14 +20,12 @@ class DataProcessingService(RunAmlJobService):
     def prepare_pipeline_inputs(self):
         try:
             model_input = None
-            # Create the Input configurations
-            # TO DO:
             # retrieve the params model name, version, pii masking flag
-            # pii_masking = self.config_data['pii_masking']
-            # if pii_masking:
-            #     model_name, model_version =  self.config_data['model_name'],  self.config_data['model_name']
-            #     model = ml_client.models.get(model_name, version=model_version)
-            #     model_input = Input(path=model.id, type=AssetTypes.CUSTOM_MODEL)
+            pii_masking = self.config_data['preprocess_configs']['pii_masking']
+            if pii_masking:
+                model_name, model_version =  self.config_data['pii_configuration']['model_version'],  self.config_data['pii_configuration']['model_name']
+                model = self.ml_client.models.get(model_name, version=model_version)
+                model_input = Input(path=model.id, type=AssetTypes.CUSTOM_MODEL)
 
             try:
                 config_file_upload_data = self.upload_config(config_data=self.config_data)
@@ -46,7 +44,7 @@ class DataProcessingService(RunAmlJobService):
                                                      "config_file": config_file,
                                                      # TO DO: replace from config file
                                                      "model_input": model_input,
-                                                     "pii_masking": False,
+                                                     "pii_masking": pii_masking,
                                                      },
                                  "input_file_urls": {"name": self.input_file.filename,
                                                      "datastore_url": input_datastore_url,
@@ -125,7 +123,7 @@ class RetrieveDataProcessingJob(CheckAmlJobService):
         child_job = self.utils.get_child_job(parent_job_name=self.job_name,
                                              ml_client=self.ml_client)
         reused = self.utils.is_job_reused(job_instance=child_job)
-        output_job_name = "reused['output_job_name']"
+        output_job_name = reused['output_job_name']
         data_processing_output_path = settings.data_processing_output_path.format(job_name=output_job_name)
         output_datastore_url = self.utils.get_datastore_file_uri(ml_client=self.ml_client,
                                                        file_path=data_processing_output_path,
