@@ -3,9 +3,10 @@ from enum import Enum
 
 class ExceptionMessages(Enum):
     user_name_exception = "UserName not in request headers"
-    TUESDAY = 2
-    WEDNESDAY = 3
-    THURSDAY = 4
-    FRIDAY = 5
-    SATURDAY = 6
-    SUNDAY = 7
+    request_gen_exception = "{status_code}, {error_message}"
+    bad_request_exception = ("{status_code}, Bad Request, parameters missing or invalid value provided for parameters: "
+                             " {params}")
+
+
+class StringConstants(Enum):
+    latest = "latest"

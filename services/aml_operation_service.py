@@ -8,39 +8,45 @@ import tempfile
 
 
 class AmlService(ABC):
-    def __init__(self, workspace):
+    def __init__(self, workspace, input_file, config_data, experiment):
         self.workspace = workspace
+        self.utils = Utils()
+        self.input_file = input_file
+        self.config_data = json.loads(config_data)
+        self.experiment = experiment
         self.ml_client = Utils.get_workspace_client(workspace_name=self.workspace)
+        self.config_name = None
 
-    def get_pipeline_component(self, key):
-        comp_name = os.getenv(key)
-        if not comp_name:
-            raise Exception(f"component {key} not found in environment variables")
-        return comp_name
+    @abstractmethod
+    def prepare_pipeline_inputs(self):
+        pass
 
-    # @abstractmethod
-    # def prepare_pipeline_inputs(self):
-    #     pass
-    #
-    # @abstractmethod
-    # def run_pipeline(self, experiment_name:str,
-    #                  pipeline_job_instance: object):
+    @abstractmethod
+    def run_pipeline(self):
+        pass
+
+    @abstractmethod
+    def retrieve_job_status(self, job_name, job_database_id):
         pass
 
     def upload_config(self, config_data: dict) -> object:
         """
-
         :param config_data:
         """
         current_file_dir = os.path.dirname(os.path.abspath(__file__))
         with tempfile.TemporaryDirectory(dir=current_file_dir) as temp_dir:
             print("Temporary directory:", temp_dir)
             local_file_path = temp_dir
-            config_name = settings.config_file_base_name + '_' + str(uuid4()) + '.' + settings.file_extension['json']
-            file_path = os.path.join(local_file_path, config_name)
+            self.config_name = settings.config_file_base_name + '_' + str(uuid4()) + '.' + settings.file_extension['json']
+            file_path = os.path.join(local_file_path, self.config_name)
             with open(file_path, 'w') as json_file:
                 json.dump(config_data, json_file, indent=2)
-            Utils().upload_local_file_to_workspace_blob_storage(file_name=config_name,
-                                                                local_file_path=file_path,
-                                                                workspace_name=self.workspace)
-            return config_name
+            urls = self.utils.upload_local_file_to_workspace_blob_storage(file_name=self.config_name,
+                                                                          local_file_path=file_path,
+                                                                          ml_client=self.ml_client)
+        return {"config_urls": urls}
+
+    def upload_input_file(self, file_stream: object):
+        urls = self.utils.upload_file_stream_to_workspace_blob_storage(file_stream=file_stream,
+                                                                       ml_client=self.ml_client)
+        return {"input_file_urls": urls}
