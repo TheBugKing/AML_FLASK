@@ -5,7 +5,7 @@ from flask import request
 from azure.ai.ml import MLClient
 from azure.identity import ClientSecretCredential
 from exceptions.username_exception import UserNameException
-from utils.constants import ExceptionMessages
+from utils.constants import Messages
 
 
 class Utils:
@@ -31,7 +31,7 @@ class Utils:
         user = request.headers.get('UserName')
         print(f"UserName is : {user}")
         if not user:
-            raise UserNameException(ExceptionMessages.user_name_exception.value)
+            raise UserNameException(Messages.user_name_exception.value)
         return user
 
     @staticmethod
@@ -145,3 +145,13 @@ class Utils:
                                           container_name=store.container_name)
         blob_service.delete_file(blob_path=target_path,
                                  file_name=file_name)
+
+    def get_aml_job_status(self, job_name, ml_client: MLClient):
+        job = ml_client.jobs.get(job_name)
+        status = job.status
+        return status.lower()
+    
+    def get_child_job(self,
+                      parent_job_name,
+                      ml_client: MLClient):
+        return next(ml_client.jobs.list(parent_job_name=parent_job_name))

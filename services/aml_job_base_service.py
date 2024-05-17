@@ -7,7 +7,7 @@ from utils.utils import Utils
 import tempfile
 
 
-class AmlService(ABC):
+class RunAmlJobService(ABC):
     def __init__(self, workspace, input_file, config_data, experiment):
         self.workspace = workspace
         self.utils = Utils()
@@ -24,11 +24,7 @@ class AmlService(ABC):
     @abstractmethod
     def run_pipeline(self):
         pass
-
-    @abstractmethod
-    def retrieve_job_status(self, job_name, job_database_id):
-        pass
-
+    
     def upload_config(self, config_data: dict) -> object:
         """
         :param config_data:
@@ -50,3 +46,20 @@ class AmlService(ABC):
         urls = self.utils.upload_file_stream_to_workspace_blob_storage(file_stream=file_stream,
                                                                        ml_client=self.ml_client)
         return {"input_file_urls": urls}
+    
+
+class CheckAmlJobService(ABC):
+    def __init__(self, workspace, job_name, job_db_id):
+        self.workspace = workspace
+        self.utils = Utils()
+        self.job_name = job_name
+        self.job_db_id = job_db_id
+        self.ml_client = Utils.get_workspace_client(workspace_name=self.workspace)
+
+    @abstractmethod
+    def retrieve_job_status(self):
+        pass
+
+    @abstractmethod
+    def post_completion(self):
+        pass

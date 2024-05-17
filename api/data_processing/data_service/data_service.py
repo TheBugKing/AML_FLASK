@@ -7,12 +7,12 @@ from azure.ai.ml import MLClient, Input
 from azure.ai.ml.constants import AssetTypes
 
 import settings
-from services.aml_operation_service import AmlService
-from utils.constants import StringConstants
+from services.aml_job_base_service import RunAmlJobService, CheckAmlJobService
+from utils.constants import StringConstants, AmlJobStatusConstants
 from exceptions.file_upload_exception import FileUploadException
 
 
-class DataProcessingService(AmlService):
+class DataProcessingService(RunAmlJobService):
     def __init__(self, workspace, input_file, config_data):
         super().__init__(workspace=workspace,
                          input_file=input_file,
@@ -94,8 +94,6 @@ class DataProcessingService(AmlService):
 
             # TO DO: INSERT Partial data in database table
             # here
-
-            return pipeline_job
         except FileUploadException as e:
             raise e
         except Exception as e:
@@ -105,9 +103,26 @@ class DataProcessingService(AmlService):
                                                           ml_client=self.ml_client)
             raise e
         
+
+class RetrieveDataProcessingJob(CheckAmlJobService):
+    def __init__(self, workspace, job_name, job_db_id):
+        super().__init__(workspace=workspace,
+                         job_name=job_name,
+                         job_db_id=job_db_id)
     
-    def retrieve_job_status(self, job_name, job_database_id):
+    def retrieve_job_status(self):
+        status = self.utils.get_aml_job_status(job_name=self.job_name,
+                                      ml_client=self.ml_client)
+        if status.lower() == AmlJobStatusConstants.completed.value.lower():
+            self.post_completion()
+        else:
+            # TO DO:
+            # Update data base status
+            return status
+        
+    def post_completion(self):
         pass
+    
 
 
     
