@@ -1,9 +1,5 @@
-import json
-import os
-from abc import ABC
 from pprint import pprint
-
-from azure.ai.ml import MLClient, Input
+from azure.ai.ml import Input
 from azure.ai.ml.constants import AssetTypes
 
 import settings
