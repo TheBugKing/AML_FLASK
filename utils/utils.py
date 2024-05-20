@@ -1,5 +1,6 @@
 import os
 import settings
+import mlflow
 from services.blob_storage_service import BlobStorageService
 from flask import request
 from azure.ai.ml import MLClient
@@ -144,14 +145,16 @@ class Utils:
         job = ml_client.jobs.get(job_name)
         status = job.status
         return status.lower()
-    
+
     def get_child_job(self,
                       parent_job_name,
-                      ml_client: MLClient):
-        return next(ml_client.jobs.list(parent_job_name=parent_job_name))
-    
+                      ml_client: MLClient,
+                      all_jobs=False):
+        return next(ml_client.jobs.list(parent_job_name=parent_job_name)) if not all_jobs \
+            else ml_client.jobs.list(parent_job_name=parent_job_name)
+
     def is_job_reused(self,
-                    job_instance: object):
+                      job_instance: object):
         output_job_name = None
         reused = job_instance.properties.get('azureml.isreused')
         reused_flag = reused == 'true'
@@ -162,3 +165,66 @@ class Utils:
         if not output_job_name:
             raise Exception("unable to configure reused job check")
         return {'is_reused': reused_flag, 'output_job_name': output_job_name}
+
+    def set_ml_flow_tracking_uri(self, ml_client: MLClient):
+        mlflow.set_tracking_uri(ml_client.workspaces.get(ml_client.workspace_name).mlflow_tracking_uri)
+        print("ML flow URI set successfully", ml_client.workspaces.get(ml_client.workspace_name).mlflow_tracking_uri)
+
+    def unset_ml_flow_uri(self):
+        mlflow.set_tracking_uri(None)
+        print("ML flow URI unset successfully")
+
+    def retrieve_metrics_from_jobs_recursively(self, ml_client: MLClient,
+                                               job_name, data_dict):
+        """
+        Recursively retrieves metrics from ML flow runs for a given job and its embedded jobs.
+        Parameters:
+        - ml_client (MLClient): An instance of the MLClient class.
+        - job_name (str): The name of the job to retrieve metrics for.
+        - data_dict (dict): A dictionary to store the retrieved metrics.
+
+        Returns:
+        None
+        The method fetches metrics data for the specified job and its embedded jobs recursively.
+        It populates the provided data_dict with the metrics information.
+        Metrics are collected in key, value pairs for the latest iteration, and then the method
+        fetches all historic iterations for each key. The metrics data is organized into a main_list
+        containing dictionaries for each metric key, where each dictionary includes information
+        about different iterations, such as step, timestamp, key, and value.
+        The method recursively calls itself to retrieve metrics for all embedded jobs within the
+        specified job_name.
+
+        NOTE: Set the MLFlow tracking uri before calling the method and
+        post execution unset the MLFlow tracking uri
+        """
+        # NOTE: Set the MLFlow tracking uri before calling the method and
+        # NOTE: post execution unset the MLFlow tracking uri
+        main_list = []
+        # get the metrics in key, values pairs for latest iteration
+        # we will use the keys to fetch all the historic iterations
+        run = mlflow.get_run(run_id=job_name)
+        display_name = run.data.tags['mlflow.runName']
+        # check if metrics are available
+        if run.data.metrics:
+            # loop through the keys and get all iterations for each keys
+            # graph or table data will have multiple iterations
+            # single static metrics will have only one iteration
+            for key in run.data.metrics.keys():
+                temp = []
+                sub_run = mlflow.tracking.MlflowClient().get_metric_history(job_name, key)
+                for step, i in enumerate(sub_run):
+                    temp.append({i.key: Utils.replace_nan(obj=i.value, value=None), "step": step,
+                                 "timestamp": i.timestamp})
+                main_list.append({key: temp})
+            # update the dictionary inplace
+            data_dict.update({display_name: main_list})
+            # recursively check for all embedded jobs
+            [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
+                                                         job_name=jobs.name, data_dict=data_dict) for jobs in \
+             self.get_child_job(ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
+        else:
+            # recursively check for all embedded jobs
+            [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
+                                                         job_name=jobs.name, data_dict=data_dict) for jobs in
+             self.get_child_job(
+                 ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
