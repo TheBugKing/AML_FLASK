@@ -35,16 +35,17 @@ def get_ft_files_by_id(file_id):
 def get_all_llm_models(model_id):
     if request.method == 'GET':
         # This API should execute an SP on llmmodel
-        # returns a details of all
-        return "SERVER iS RUNNING", 200
-
-
-@repository_bp.route('/models/<model_id:int>', methods=['GET'])
-def get_all_llm(file_id):
-    if request.method == 'GET':
-        # This API should execute an SP on llmodel to based on params model_id
-        # returns a details of a specific model
-        return "SERVER iS RUNNING", 200
+        model_type = request.args.get('model_type')
+        model_id = request.args.get('model_id')
+        if model_type:
+            # pull data by model datat by type
+            return
+        if model_id:
+            # pull data by model datat by id
+            return
+        else:
+            # returns a details of all
+            return
 
 
 @repository_bp.route('/finetune/tasks', methods=['GET'])
@@ -52,16 +53,13 @@ def get_all_ft_tasks(file_id):
     if request.method == 'GET':
         # This API should execute an SP on fine-tuning tasks
         # returns a details all available tasks
+        task_id = request.args.get('task_id')
+        if task_id:
+            return
+        else:
+            # all tasks
+            return
         return "SERVER iS RUNNING", 200
-
-
-@repository_bp.route('/finetune/tasks/<task_id:int>', methods=['GET'])
-def get_ft_task_by_id(task_id):
-    if request.method == 'GET':
-        # This API should execute an SP on fine-tuning tasks based on task id
-        # returns a details specific tasks
-        return "SERVER iS RUNNING", 200
-
 
 @repository_bp.route('/llm/configs', methods=['GET'])
 def get_llmgw_config_by_key(key):
