@@ -10,5 +10,8 @@ datastore_base_uri = ('azureml://subscriptions/{subscription_id}/resourcegroups/
 # TO DO:
 # CHECK JOB OUTPUT PATH
 data_processing_output_path = 'azureml/{job_name}/process_output'
-data_processing_component = "Data Processing Component"
+data_processing_component = "data_processing_pipeline"
 data_processing_experiment = "Data Processing Experiment"
+ftfiles_table = 'FtFiles'
+ftfiles_table_id = ftfiles_table + 'Id'
+

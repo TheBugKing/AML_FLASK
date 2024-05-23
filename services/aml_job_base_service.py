@@ -49,11 +49,11 @@ class RunAmlJobService(ABC):
     
 
 class CheckAmlJobService(ABC):
-    def __init__(self, workspace, job_name, table_id_column):
+    def __init__(self, workspace, job_name, table_id_data):
         self.workspace = workspace
         self.utils = Utils()
         self.job_name = job_name
-        self.table_id_column = table_id_column
+        self.table_id_data = table_id_data
         self.ml_client = Utils.get_workspace_client(workspace_name=self.workspace)
 
     @abstractmethod

@@ -1,70 +1,103 @@
 from flask import request
+
 from flask import Blueprint
+
+from dbo.llm_repository import LLMRepository
+
+from services.response_service import ResponseService
+
+from flask import jsonify
 
 repository_bp = Blueprint('repository_bp_bp', __name__)
 
 
 @repository_bp.route('/workspaces', methods=['GET'])
 def get_workspaces():
-    if request.method == 'GET':
-        # This API should execute an SP on Workspace Table to based on params WorkspaceName, active
-        # if no params is provided from request then return all available workspaces
-        # else filter by active true false
-        return "SERVER iS RUNNING", 200
+    try:
+        if request.method == 'GET':
+            is_active = request.args.get('isActive')
+            rs = LLMRepository()
+            return rs.get_workspace_data(is_active=is_active), 200
+    except Exception as e:
+        status_code = 500
+        return jsonify(ResponseService.get_exception_message(msg=str(e), status_code=status_code)), status_code
 
 
-@repository_bp.route('/files/<workspace_id:int>', methods=['GET'])
+@repository_bp.route('/files', methods=['GET'])
 def get_all_ft_files():
     if request.method == 'GET':
-        # This API should execute an SP on files to based on params ID and MLjobstatus
-        # if no params is provided from request then return all files of a given workspace
-        # else filter by WorkspaceName or ID or MLjobstatus
-        return "SERVER iS RUNNING", 200
+        try:
+            if request.method == 'GET':
+                workspace_id = request.args.get('workspaceId')
+                file_id = request.args.get('fileId')
 
+                if workspace_id:
+                    rs = LLMRepository()
+                    return rs.get_files(workspace_id=workspace_id), 200
 
-@repository_bp.route('/file/<file_id:int>', methods=['GET'])
-def get_ft_files_by_id(file_id):
-    if request.method == 'GET':
-        # This API should execute an SP on files to based on params file_id
-        # must return
-        # returns a details of a specific file
-        return "SERVER iS RUNNING", 200
+                if file_id:
+                    rs = LLMRepository()
+                    return rs.get_files(file_id=file_id), 200
+                else:
+                    rs = LLMRepository()
+                    return rs.get_files(), 200
+        except Exception as e:
+            status_code = 500
+            return jsonify(ResponseService.get_exception_message(msg=str(e), status_code=status_code)), status_code
 
 
 @repository_bp.route('/models', methods=['GET'])
-def get_all_llm_models(model_id):
-    if request.method == 'GET':
-        # This API should execute an SP on llmmodel
-        model_type = request.args.get('model_type')
-        model_id = request.args.get('model_id')
-        if model_type:
-            # pull data by model datat by type
-            return
-        if model_id:
-            # pull data by model datat by id
-            return
-        else:
-            # returns a details of all
-            return
+def get_all_llm_models():
+    try:
+        if request.method == 'GET':
+            collections = request.args.get('collections')
+            model_architecture = request.args.get('modelArchitecture')
+            finetune_task = request.args.get("finetuneTask")
+            model_id = request.args.get('modelId')
+            rs = LLMRepository()
+            return rs.get_all_llm_model_data(collections=collections, model_architecture=model_architecture,
+                                             finetune_task=finetune_task, model_id=model_id), 200
+    except Exception as e:
+        status_code = 500
+        return jsonify(ResponseService.get_exception_message(msg=str(e), status_code=status_code)), status_code
 
 
 @repository_bp.route('/finetune/tasks', methods=['GET'])
-def get_all_ft_tasks(file_id):
+def get_all_ft_tasks():
     if request.method == 'GET':
-        # This API should execute an SP on fine-tuning tasks
-        # returns a details all available tasks
-        task_id = request.args.get('task_id')
-        if task_id:
-            return
-        else:
-            # all tasks
-            return
-        return "SERVER iS RUNNING", 200
+        try:
+            if request.method == 'GET':
+                task_id = request.args.get('taskId')
+                task_type = request.args.get('taskType')
 
-@repository_bp.route('/llm/configs', methods=['GET'])
-def get_llmgw_config_by_key(key):
+                if task_id:
+                    rs = LLMRepository()
+                    return rs.get_finetuning_tasks(task_id=task_id), 200
+
+                if task_type:
+                    rs = LLMRepository()
+                    return rs.get_finetuning_tasks(task_type=task_type), 200
+                else:
+                    rs = LLMRepository()
+                    return rs.get_finetuning_tasks(), 200
+        except Exception as e:
+            status_code = 500
+            return jsonify(ResponseService.get_exception_message(msg=str(e), status_code=status_code)), status_code
+
+
+@repository_bp.route('/compute', methods=['GET'])
+def get_all_computes():
     if request.method == 'GET':
-        # This API should execute an SP on llmgw config table tasks based on key
-        # returns a details specific tasks
-        key = request.args.get('key')
-        return "SERVER iS RUNNING", 200
+        try:
+            if request.method == 'GET':
+                workspace_id = request.args.get('workspaceId')
+                if workspace_id:
+                    rs = LLMRepository()
+                    return rs.get_computes(workspace_id=workspace_id), 200
+                else:
+                    status_code = 400
+                    return jsonify(ResponseService.get_bad_request_message(params='workspaceId',
+                                                                           status_code=status_code)), status_code
+        except Exception as e:
+            status_code = 500
+            return jsonify(ResponseService.get_exception_message(msg=str(e), status_code=status_code)), status_code
