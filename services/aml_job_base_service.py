@@ -8,10 +8,9 @@ import tempfile
 
 
 class RunAmlJobService(ABC):
-    def __init__(self, workspace, input_file, config_data, experiment):
+    def __init__(self, workspace, config_data, experiment):
         self.workspace = workspace
         self.utils = Utils()
-        self.input_file = input_file
         self.config_data = json.loads(config_data)
         self.experiment = experiment
         self.ml_client = Utils.get_workspace_client(workspace_name=self.workspace)

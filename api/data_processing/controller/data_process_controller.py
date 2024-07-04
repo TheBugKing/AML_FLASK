@@ -11,9 +11,9 @@ from dbo.llm_repository import LLMRepository
 class DataProcessingController(RunAmlJobService):
     def __init__(self, workspace, input_file, config_data, compute):
         super().__init__(workspace=workspace,
-                         input_file=input_file,
                          config_data=config_data,
                          experiment=settings.data_processing_experiment)
+        self.input_file = input_file
         self.data_pr_comp = settings.data_processing_component
         self.compute = compute
 
