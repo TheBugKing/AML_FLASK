@@ -197,34 +197,53 @@ class Utils:
         NOTE: Set the MLFlow tracking uri before calling the method and
         post execution unset the MLFlow tracking uri
         """
-        # NOTE: Set the MLFlow tracking uri before calling the method and
-        # NOTE: post execution unset the MLFlow tracking uri
-        main_list = []
-        # get the metrics in key, values pairs for latest iteration
-        # we will use the keys to fetch all the historic iterations
-        run = mlflow.get_run(run_id=job_name)
-        display_name = run.data.tags['mlflow.runName']
-        # check if metrics are available
-        if run.data.metrics:
-            # loop through the keys and get all iterations for each keys
-            # graph or table data will have multiple iterations
-            # single static metrics will have only one iteration
-            for key in run.data.metrics.keys():
-                temp = []
-                sub_run = mlflow.tracking.MlflowClient().get_metric_history(job_name, key)
-                for step, i in enumerate(sub_run):
-                    temp.append({i.key: Utils.replace_nan(obj=i.value, value=None), "step": step,
-                                 "timestamp": i.timestamp})
-                main_list.append({key: temp})
-            # update the dictionary inplace
-            data_dict.update({display_name: main_list})
-            # recursively check for all embedded jobs
-            [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
-                                                         job_name=jobs.name, data_dict=data_dict) for jobs in \
-             self.get_child_job(ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
-        else:
-            # recursively check for all embedded jobs
-            [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
-                                                         job_name=jobs.name, data_dict=data_dict) for jobs in
-             self.get_child_job(
-                 ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
+        try:
+            # NOTE: Set the MLFlow tracking uri before calling the method and
+            # NOTE: post execution unset the MLFlow tracking uri
+            main_list = []
+            # get the metrics in key, values pairs for latest iteration
+            # we will use the keys to fetch all the historic iterations
+            self.set_ml_flow_tracking_uri(ml_client=ml_client)
+            run = mlflow.get_run(run_id=job_name)
+            display_name = run.data.tags['mlflow.runName']
+            # check if metrics are available
+            if run.data.metrics:
+                # loop through the keys and get all iterations for each keys
+                # graph or table data will have multiple iterations
+                # single static metrics will have only one iteration
+                for key in run.data.metrics.keys():
+                    temp = []
+                    sub_run = mlflow.tracking.MlflowClient().get_metric_history(job_name, key)
+                    for step, i in enumerate(sub_run):
+                        temp.append({i.key: Utils.replace_nan(obj=i.value, value=None), "step": step,
+                                    "timestamp": i.timestamp})
+                    main_list.append({key: temp})
+                # update the dictionary inplace
+                data_dict.update({display_name: main_list})
+                # recursively check for all embedded jobs
+                [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
+                                                            job_name=jobs.name, data_dict=data_dict) for jobs in \
+                self.get_child_job(ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
+            else:
+                # recursively check for all embedded jobs
+                [self.retrieve_metrics_from_jobs_recursively(ml_client=ml_client,
+                                                            job_name=jobs.name, data_dict=data_dict) for jobs in
+                self.get_child_job(
+                    ml_client=ml_client, parent_job_name=job_name, all_jobs=True)]
+        finally:
+            self.unset_ml_flow_uri()
+
+    @staticmethod
+    def get_datastore_model_path(ml_client: MLClient, model_path: str):
+        url = Utils.get_datastore_base_uri(subscription_id=ml_client.subscription_id,
+                                                resource_group_name=ml_client.resource_group_name,
+                                                datastore_name=ml_client.datastores.get_default().name,
+                                                workspace_name=ml_client.workspace_name) + model_path.strip('/\\')
+        return url
+    
+
+    @staticmethod
+    def get_blob_model_uri(ml_client: MLClient, model_path: str):
+        url = Utils.get_blob_base_uri(container_name=ml_client.datastores.get_default().container_name,
+                                            account_name=ml_client.datastores.get_default().account_name) + model_path.strip('/\\')
+        return url

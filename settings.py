@@ -14,4 +14,5 @@ data_processing_component = "data_processing_pipeline"
 data_processing_experiment = "Data Processing Experiment"
 ftfiles_table = 'FtFiles'
 ftfiles_table_id = ftfiles_table + 'Id'
+finetune_model_path = 'azureml/{job_name}/model_outputs'
 

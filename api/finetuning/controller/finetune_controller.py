@@ -90,7 +90,7 @@ class FinetuneController(RunAmlJobService):
             raise e
 
 
-class RetrieveDataProcessingJob(CheckAmlJobService):
+class RetrieveFineTuneJob(CheckAmlJobService):
     def __init__(self, workspace, job_name, table_id_data):
         super().__init__(workspace=workspace,
                          job_name=job_name,
@@ -115,6 +115,25 @@ class RetrieveDataProcessingJob(CheckAmlJobService):
     def post_completion(self):
         # TO DO:
         # use this only if child job produces output
-        params = {}
+        metrics = {}
         dbo = LLMRepository()
-        return self.status
+        # get metrics from mlflow
+        # adding metrics to the dictionary in place
+        self.utils.retrieve_metrics_from_jobs_recursively(ml_client=self.ml_client,
+                                                          job_name=self.job_name,
+                                                          data_dict=metrics)
+        
+        child_job = self.utils.get_child_job(parent_job_name=self.job_name,
+                                             ml_client=self.ml_client)
+        reused = self.utils.is_job_reused(job_instance=child_job)
+        output_job_name = reused['output_job_name']
+        model_path = settings.finetune_model_path.format(job_name=output_job_name)
+        model_output_datastore_url = self.utils.get_datastore_model_path(ml_client=self.ml_client,
+                                                                 model_path=model_path)
+        model_output_blob_url = self.utils.get_blob_model_uri(ml_client=self.ml_client,
+                                                                 model_path=model_path)
+        
+        # add your database logic here
+        # TO DO
+
+        return
